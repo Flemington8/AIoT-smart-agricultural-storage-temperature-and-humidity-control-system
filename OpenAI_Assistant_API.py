@@ -4,31 +4,33 @@
 # Threads can be used to create multiple conversations with the same assistant.
 import json
 
+import time
+
 from openai import OpenAI
 
 from coordinator import *
 
 
 def create_thread_and_run(user_input):
-    thread = client.beta.threads.create()
-    run = submit_message(FAN_CONTROL_ASSISTANT_ID, thread, user_input)
-    return thread, run
+    api_thread = client.beta.threads.create()
+    run = submit_message(FAN_CONTROL_ASSISTANT_ID, api_thread, user_input)
+    return api_thread, run
 
 
-def submit_message(assistant_id, thread, user_message):
+def submit_message(assistant_id, api_thread, user_message):
     client.beta.threads.messages.create(
-        thread_id = thread.id, role = "user", content = user_message
+        thread_id = api_thread.id, role = "user", content = user_message
     )
     return client.beta.threads.runs.create(
-        thread_id = thread.id,
+        thread_id = api_thread.id,
         assistant_id = assistant_id,
     )
 
 
-def wait_on_run(run, thread):
+def wait_on_run(run, api_thread):
     while run.status == "queued" or run.status == "in_progress":
         run = client.beta.threads.runs.retrieve(
-            thread_id = thread.id,
+            thread_id = api_thread.id,
             run_id = run.id,
         )  # retrieve the run status
         time.sleep(0.5)
@@ -79,8 +81,8 @@ assistant = client.beta.assistants.create(
 
 FAN_CONTROL_ASSISTANT_ID = assistant.id
 
-thread, run = create_thread_and_run("The temperature is {} (in Celsius).".format(transmit_coordinator_data()))
-run = wait_on_run(run, thread)
+api_thread, run = create_thread_and_run("The temperature is {} (in Celsius).".format(transmit_coordinator_data()))
+run = wait_on_run(run, api_thread)
 
 while True:
     # time.sleep(20)  # make sure run.status won't be 'failed'
@@ -93,7 +95,7 @@ while True:
         # and you can supply the results of the function call back to continue the Run execution.
         if name == "control_fan":  # In the future, we will support more functions.
             run = client.beta.threads.runs.submit_tool_outputs(
-                thread_id = thread.id,
+                thread_id = api_thread.id,
                 run_id = run.id,
                 tool_outputs = [
                     {
@@ -103,10 +105,10 @@ while True:
                 ],
             )
 
-            run = wait_on_run(run, thread)
+            run = wait_on_run(run, api_thread)
 
             messages = client.beta.threads.messages.list(
-                thread_id = thread.id,
+                thread_id = api_thread.id,
                 order = "asc"
             )
             pretty_print(messages)
@@ -115,7 +117,7 @@ while True:
     finally:
         print('\nwait for 20 seconds')
         time.sleep(20)  # make sure run.status won't be 'failed', because the rate limit is 3 requests per minute.
-        # Add a new message to the thread
-        run = submit_message(FAN_CONTROL_ASSISTANT_ID, thread,
+        # Add a new message to the api_thread
+        run = submit_message(FAN_CONTROL_ASSISTANT_ID, api_thread,
                              "The temperature is {} (in Celsius).".format(receive_coordinator_data()))
-        run = wait_on_run(run, thread)
+        run = wait_on_run(run, api_thread)
