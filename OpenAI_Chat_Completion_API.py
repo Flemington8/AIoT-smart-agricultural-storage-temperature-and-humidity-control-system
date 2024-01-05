@@ -23,6 +23,8 @@ try:
                 messages = [
                     {"role": "system", "content": "You are a smart home assistant, and you can control the lamp"
                                                   "based on the current brightness to make the homeowner feel comfortable."
+                                                  "The normal brightness value is approximately between 700 and 1000."
+                                                  "So, when the brightness is higher than 1200, you should turn off the lamp."
                                                   "You only need to reply 'ON' or 'OFF'."},
                     {"role": "user", "content": "The brightness is {}. Can you help me "
                                                 "decide whether to open the lamp?".format(brightness)},
