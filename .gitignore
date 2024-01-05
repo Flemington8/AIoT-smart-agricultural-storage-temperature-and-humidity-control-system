@@ -162,3 +162,5 @@ cython_debug/
 
 # User-specific stuff
 OpenAI_API.json
+test.py
+!/test.py

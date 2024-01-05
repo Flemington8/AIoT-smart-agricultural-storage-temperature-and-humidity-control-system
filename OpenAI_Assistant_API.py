@@ -3,7 +3,6 @@
 
 # Threads can be used to create multiple conversations with the same assistant.
 import json
-
 import time
 
 from openai import OpenAI
@@ -13,7 +12,7 @@ from coordinator import *
 
 def create_thread_and_run(user_input):
     api_thread = client.beta.threads.create()
-    run = submit_message(FAN_CONTROL_ASSISTANT_ID, api_thread, user_input)
+    run = submit_message(HOME_ASSISTANT_ID, api_thread, user_input)
     return api_thread, run
 
 
@@ -48,44 +47,66 @@ def pretty_print(messages):
         print(f"{message.role}: {message.content[0].text.value}")
 
 
-function_json = {
+control_fan_json = {
     "name": "control_fan",
     "description": "When temperature is high, key_status will be 'ON', so set the fan on,"
                    "when temperature is low, key_status will be 'OFF', so set the fan off.",
     "parameters": {
         "type": "object",
         "properties": {
-            "key_status": {"type": "string",
-                           "description": "The status of fan, only ON or OFF is allowed."}
+            "command": {"type": "string",
+                        "description": "The next status of fan, only ON or OFF is allowed."}
         },
-        "required": ["control_factor"]
+        "required": ["command"]
+    }
+}
+
+control_lamp_json = {
+    "name": "control_lamp",
+    "description": "When brightness is high, key_status will be 'OFF', so set the fan off,"
+                   "when brightness is low, key_status will be 'ON', so set the fan on."
+                   "The suitable brightness range is approximately between 1200 and 1500.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "command": {"type": "string",
+                        "description": "The next status of lamp, only ON or OFF is allowed."}
+        },
+        "required": ["command"]
     }
 }
 
 with open('OpenAI_API.json', 'r') as f:
-    api_key = json.load(f)['assistants_api']['api_key']
+    api_key = json.load(f)['assistant_api']['api_key']
 
 client = OpenAI(
     api_key = api_key
 )
 
 assistant = client.beta.assistants.create(
-    name = "Fan Control Assistant",
+    name = "Home Assistant",
     instructions = "You are a smart home assistant,"
-                   "and you can control the fan based on the current temperature to make the homeowner feel comfortable.",
+                   "and you can control the lamp based on the current brightness to make the homeowner feel comfortable.",
     tools = [{"type": "code_interpreter"},
              {"type": "retrieval"},
-             {"type": "function", "function": function_json}],
+             {"type": "function", "function": control_fan_json},
+             {"type": "function", "function": control_lamp_json}],
     model = "gpt-3.5-turbo-1106"
 )
 
-FAN_CONTROL_ASSISTANT_ID = assistant.id
+HOME_ASSISTANT_ID = assistant.id
 
-api_thread, run = create_thread_and_run("The temperature is {} (in Celsius).".format(transmit_coordinator_data()))
+while True:  # wait for the brightness value
+    if not data_stack.empty():
+        brightness = data_stack.get()
+        break
+
+# brightness = data_queue.get()
+
+api_thread, run = create_thread_and_run("The brightness value is {}.".format(brightness))
 run = wait_on_run(run, api_thread)
 
 while True:
-    # time.sleep(20)  # make sure run.status won't be 'failed'
     try:
         tool_call = run.required_action.submit_tool_outputs.tool_calls[0]
         name = tool_call.function.name
@@ -93,14 +114,14 @@ while True:
 
         # The Assistants API will pause execution during a Run when it invokes functions,
         # and you can supply the results of the function call back to continue the Run execution.
-        if name == "control_fan":  # In the future, we will support more functions.
+        if name == "control_lamp":  # In the future, we will support more functions.
             run = client.beta.threads.runs.submit_tool_outputs(
                 thread_id = api_thread.id,
                 run_id = run.id,
                 tool_outputs = [
                     {
                         "tool_call_id": tool_call.id,
-                        "output": transmit_coordinator_data(arguments["key_status"]),
+                        "output": transmit_coordinator_command(arguments["command"]),
                     }
                 ],
             )
@@ -112,12 +133,16 @@ while True:
                 order = "asc"
             )
             pretty_print(messages)
+
     except Exception as e:
         print('Exception: ', e)
+
     finally:
         print('\nwait for 20 seconds')
         time.sleep(20)  # make sure run.status won't be 'failed', because the rate limit is 3 requests per minute.
         # Add a new message to the api_thread
-        run = submit_message(FAN_CONTROL_ASSISTANT_ID, api_thread,
-                             "The temperature is {} (in Celsius).".format(receive_coordinator_data()))
+
+        brightness = data_stack.get()
+        data_stack.queue_clear()  # clear the stack
+        run = submit_message(HOME_ASSISTANT_ID, api_thread, "The brightness value is {}.".format(brightness))
         run = wait_on_run(run, api_thread)

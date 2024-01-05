@@ -15,21 +15,22 @@ client = OpenAI(
 )
 
 try:
-    while not data_queue.empty():
-        brightness = data_queue.get()
-        completion = client.chat.completions.create(
-            model = "gpt-3.5-turbo-16k-0613",
-            messages = [
-                {"role": "system", "content": "You are a smart home assistant, and you can control the lamp"
-                                              "based on the current brightness to make the homeowner feel comfortable."
-                                              "You only need to reply 'ON' or 'OFF'."},
-                {"role": "user", "content": "The brightness is {}. Can you help me "
-                                            "decide whether to open the lamp?".format(brightness)},
-            ]
-        )
+    while True:
+        if not data_stack.empty():
+            brightness = data_stack.get()
+            completion = client.chat.completions.create(
+                model = "gpt-3.5-turbo-16k-0613",
+                messages = [
+                    {"role": "system", "content": "You are a smart home assistant, and you can control the lamp"
+                                                  "based on the current brightness to make the homeowner feel comfortable."
+                                                  "You only need to reply 'ON' or 'OFF'."},
+                    {"role": "user", "content": "The brightness is {}. Can you help me "
+                                                "decide whether to open the lamp?".format(brightness)},
+                ]
+            )
 
-        print('The brightness is {} (in Celsius),'.format(brightness), 'so',
-              transmit_coordinator_data(completion.choices[0].message.content))
+            print('The brightness value is {},'.format(brightness), 'so',
+                  transmit_coordinator_command(completion.choices[0].message.content))
 
 except KeyboardInterrupt:
     print("KeyboardInterrupt")
