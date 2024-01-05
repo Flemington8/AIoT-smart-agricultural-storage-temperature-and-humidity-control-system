@@ -36,18 +36,9 @@ def transmit_coordinator_command(command):
             return 'The lamp is turned off.'
 
 
-def transmit_coordinator_data():  # send data to coordinator temporarily
-    try:
-        data = '160'
-        ser.write(data.encode('utf-8'))
-    except Exception as e:
-        print("error communicating in transmit data: " + str(e))
-
-
 def receive_coordinator_data():
     try:
         while True:  # while ser.in_waiting: failed, because at first, ser.in_waiting is 0, so the while loop won't be executed.
-            transmit_coordinator_data()  # send data to coordinator temporarily
             if ser.in_waiting:
                 data_hex_str = ser.readline().hex()
                 # read binary data from serial port & decode from binary to hex and restore it in a string
