@@ -49,7 +49,13 @@ def receive_coordinator_data():
         while True:  # while ser.in_waiting: failed, because at first, ser.in_waiting is 0, so the while loop won't be executed.
             transmit_coordinator_data()  # send data to coordinator temporarily
             if ser.in_waiting:
-                data = ser.readline().decode('utf-8').rstrip()  # read data from serial port until '\n' & decode from binary to utf-8
+                data_hex_str = ser.readline().hex()
+                # read binary data from serial port & decode from binary to hex and restore it in a string
+                # ser.readline() = {bytes: 12} b'!\x02\t\x00Z\x00*LV\x04\xe15'
+                # ser.readline().hex() = {str} '210209005a002a4c5604e135'
+
+                data_hex_chars = data_hex_str[-6:-2]  # get the last two characters of the string
+                data = int(data_hex_chars, 16)
                 data_stack.put(data)  # put data into the stack to share with other threads in order to ensure thread safety
                 print("receive：", data)
             time.sleep(3)
