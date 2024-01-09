@@ -65,7 +65,9 @@ control_lamp_json = {
     "name": "control_lamp",
     "description": "When brightness is high, key_status will be 'OFF', so set the fan off,"
                    "when brightness is low, key_status will be 'ON', so set the fan on."
-                   "The suitable brightness range is approximately between 1200 and 1500.",
+                   "The suitable brightness range is approximately between 1200 and 1500."
+                   "So, when the brightness is higher than 1700, you should turn off the lamp."
+                   "So, when the brightness is lower than 1000, you should turn on the lamp.",
     "parameters": {
         "type": "object",
         "properties": {
