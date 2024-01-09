@@ -1,9 +1,9 @@
-# ChatGPT Smart Home Assistant
+# ChatGPT Smart Agricultural Storage Assistant
 
 ## Description
 
-This project uses the ChatGPT API to create a smart home assistant that interacts with home appliances through a serial port.
-The system can control home lighting and fans based on environmental parameters, such as brightness, temperature.
+This project uses the ChatGPT API to create a smart agricultural storage assistant that interacts with agricultural storage appliances through a serial port.
+The system can control storage dehumidifier and fans based on environmental parameters, such as brightness, temperature and humidity.
 It's a Python-based project that uses serial communication to control the IoT devices.
 
 ## Installation
